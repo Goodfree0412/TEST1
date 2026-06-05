@@ -77,6 +77,8 @@
         let score = 0;
         let lives = 3;
         let gameOver = false;
+        let lastTime = 0;
+        const baseSpeed = 60; // 基准帧率
 
         // 玩家鱼
         const player = {
@@ -209,14 +211,15 @@
         }
 
         // 更新玩家位置
-        function updatePlayer() {
+        function updatePlayer(deltaTime) {
             const dx = mouseX - player.x;
             const dy = mouseY - player.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             
             if (distance > 5) {
-                player.x += (dx / distance) * player.speed;
-                player.y += (dy / distance) * player.speed;
+                const moveSpeed = player.speed * deltaTime;
+                player.x += (dx / distance) * moveSpeed;
+                player.y += (dy / distance) * moveSpeed;
             }
             
             // 边界检查
@@ -229,10 +232,10 @@
         }
 
         // 更新敌人位置
-        function updateEnemies() {
+        function updateEnemies(deltaTime) {
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const enemy = enemies[i];
-                enemy.x += enemy.speed;
+                enemy.x += enemy.speed * deltaTime;
                 
                 // 移除超出屏幕的敌人
                 if (enemy.x < -100 || enemy.x > canvas.width + 100) {
@@ -266,7 +269,7 @@
         }
 
         // 更新食物
-        function updateFood() {
+        function updateFood(deltaTime) {
             for (let i = food.length - 1; i >= 0; i--) {
                 const f = food[i];
                 const dx = player.x - f.x;
@@ -275,7 +278,7 @@
                 
                 if (distance < player.size + f.size) {
                     score += 10;
-                    player.size = Math.min(50, player.size + 0.3);
+                    player.size = Math.min(50, player.size + 0.3 * deltaTime);
                     food.splice(i, 1);
                 }
             }
@@ -283,8 +286,8 @@
 
         // 绘制背景气泡
         let bubbles = [];
-        function updateBubbles() {
-            if (Math.random() < 0.1) {
+        function updateBubbles(deltaTime) {
+            if (Math.random() < 0.1 * deltaTime) {
                 bubbles.push({
                     x: Math.random() * canvas.width,
                     y: canvas.height,
@@ -294,7 +297,7 @@
             }
             
             for (let i = bubbles.length - 1; i >= 0; i--) {
-                bubbles[i].y -= bubbles[i].speed;
+                bubbles[i].y -= bubbles[i].speed * deltaTime;
                 if (bubbles[i].y < -10) {
                     bubbles.splice(i, 1);
                 }
@@ -311,15 +314,22 @@
         }
 
         // 游戏主循环
-        function gameLoop() {
+        function gameLoop(currentTime) {
             // 清空画布
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // 计算时间增量（delta time）
+            if (!lastTime) lastTime = currentTime;
+            const deltaTime = (currentTime - lastTime) / (1000 / baseSpeed);
+            lastTime = currentTime;
+            
+            // 限制最大 deltaTime，避免卡顿后速度过快
+            const clampedDelta = Math.min(deltaTime, 2.0);
             
             if (!gameOver) {
-                updatePlayer();
-                updateEnemies();
-                updateFood();
-                updateBubbles();
+                updatePlayer(clampedDelta);
+                updateEnemies(clampedDelta);
+                updateFood(clampedDelta);
+                updateBubbles(clampedDelta);
                 
                 // 更新UI
                 scoreElement.textContent = score;
